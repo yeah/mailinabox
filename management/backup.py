@@ -7,7 +7,7 @@
 # 4) The stopped services are restarted.
 # 5) STORAGE_ROOT/backup/after-backup is executed if it exists.
 
-import os, os.path, re, datetime, sys
+import os, os.path, re, datetime, sys, tempfile, time
 import dateutil.parser, dateutil.relativedelta, dateutil.tz
 import rtyaml
 from exclusiveprocess import Lock
@@ -313,27 +313,146 @@ def perform_backup(full_backup):
 	# Run a backup of STORAGE_ROOT (but excluding the backups themselves!).
 	# --allow-source-mismatch is needed in case the box's hostname is changed
 	# after the first backup. See #396.
-	try:
+	def run_duplicity_backup(dir):
 		shell('check_call', [
 			"/usr/bin/duplicity",
 			"full" if full_backup else "incr",
 			"--verbosity", "warning", "--no-print-statistics",
 			"--archive-dir", backup_cache_dir,
-			"--exclude", backup_root,
+			"--exclude", os.path.join(dir, 'backup'),
 			"--volsize", "250",
 			"--gpg-options", "'--cipher-algo=AES256'",
 			"--allow-source-mismatch",
 			*get_duplicity_additional_args(env),
-			env["STORAGE_ROOT"],
+			dir,
 			get_duplicity_target_url(config),
 			],
 			get_duplicity_env_vars(env))
-	finally:
-		# Start services again.
+	# Start services again.
+	def start_services():
 		service_command("postgrey", "start", quit=False)
 		service_command("dovecot", "start", quit=False)
 		service_command("postfix", "start", quit=False)
 		service_command("php8.0-fpm", "start", quit=False)
+
+	# Determine the lvm logical volume on which STORAGE_ROOT resides.
+	# Depending on the lvm/partition layout, STORAGE_ROOT could have its own
+	# logical volume, or it could be an lv for /home or /.
+	def get_lvm_volume(env):
+		try:
+			# Get filesystem on which STORAGE_ROOT is located, e.g. /dev/mapper/vg0-home
+			fs = shell('check_output', [
+				"/bin/df",
+				"--output=source",
+				env["STORAGE_ROOT"]]).splitlines()[1]
+
+			# Get logical volume name from lvm using the filesystem name, e.g. /dev/vg0/home
+			lv = shell('check_output', [
+				"/sbin/lvs",
+				"-o", "path",
+				"--noheadings",
+				fs], capture_stderr=True).strip()
+			return lv
+		except:
+			# Fail silently. Most likely, STORAGE_ROOT isn't on an lvm device.
+			# We will simply perform the backup without taking a snapshot.
+			return None
+
+	# Create lvm snapshot for making backups.
+	def create_lvm_snapshot(lv):
+		snap_name = "miab-snap-{0}".format(int(time.time()))
+
+		# Create snapshot
+		shell('check_output', [
+			"/sbin/lvcreate",
+			"--extents", "100%FREE",
+			"--snapshot",
+			"--name",
+			snap_name,
+			lv])
+
+		# Get full path of snapshot's block device, e.g. /dev/vg0/miab-snap-12345678
+		# (Yes, we could have built it ourselves using string concatenation, but this
+		# method seems more reliable.)
+		lvs = shell('check_output', [
+			"/sbin/lvs",
+			"-o", "path,lv_name",
+			"--noheadings"
+		]).splitlines()
+		snap_lv = next(lv.strip().split()[0] for lv in lvs if snap_name in lv)
+
+		return snap_lv
+
+	# Remove lvm snapshot.
+	def remove_lvm_snapshot(snap_lv):
+		shell('check_output', [
+			"/sbin/lvremove",
+			"--force",
+			snap_lv])
+
+	# Create a temporary mount point and mount the snapshot read-only.
+	def mount_lvm_snapshot(snap_lv):
+		mnt = tempfile.mkdtemp()
+		shell('check_call', [
+			"/bin/mount",
+			"-o", "ro",
+			snap_lv,
+			mnt])
+		return mnt
+
+	# Unmount the snapshot and remove the temporary mount point.
+	def unmount_lvm_snapshot(mnt):
+		shell('check_call', [
+			"/bin/umount",
+			mnt])
+		os.rmdir(mnt)
+
+	# Find directory `a` inside of directory `b` based on `a`'s inode.
+	# This is necessary in cases where STORAGE_ROOT is not on its own
+	# logical volume but in a subdirectory of a volume that contains
+	# other directories as well – which we do not want to backup.
+	# (e.g. /home or even /)
+	def find_dir_by_inode(a,b):
+		inode = os.stat(a).st_ino
+		dir = shell('check_output', [
+			"/usr/bin/find",
+			b,
+			"-xdev",
+			"-inum",
+			str(inode)]).strip()
+		return dir
+
+	# Check if STORAGE_ROOT is on an lvm volume and get its lv path.
+	lv = get_lvm_volume(env)
+
+	if lv:
+		# Try to create a snapshot.
+		try:
+			snap_lv = create_lvm_snapshot(lv)
+		finally:
+			# Restart services no matter the outcome.
+			start_services()
+
+		# Use snapshot for backup if available.
+		if snap_lv:
+			try:
+				mnt = mount_lvm_snapshot(snap_lv)
+				snap_lv_storage_root = find_dir_by_inode(env["STORAGE_ROOT"], mnt)
+
+				# Take backup from snapshot.
+				run_duplicity_backup(snap_lv_storage_root)
+			finally:
+				# Unmount and remove snapshot no matter the outcome.
+				unmount_lvm_snapshot(mnt)
+				remove_lvm_snapshot(snap_lv)
+
+	else:
+		# Perform a regular backup without snapshots if STORAGE_ROOT is not
+		# on lvm.
+		try:
+			run_duplicity_backup(env["STORAGE_ROOT"])
+		finally:
+			start_services()
 
 	# Remove old backups. This deletes all backup data no longer needed
 	# from more than 3 days ago.
