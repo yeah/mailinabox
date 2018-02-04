@@ -24,7 +24,7 @@ def new_message(from_email, to_email):
 def check_imap_received(subject):
     """Connects with IMAP and asserts the existence of an email, then deletes it"""
 
-    sleep(3)
+    sleep(10)
 
     # Login to IMAP
     m = imaplib.IMAP4_SSL(TEST_DOMAIN, 993)
@@ -46,7 +46,7 @@ def check_imap_received(subject):
 def assert_pop3_received(subject):
     """Connects with POP3S and asserts the existence of an email, then deletes it"""
 
-    sleep(3)
+    sleep(10)
 
     # Login to POP3
     mail = poplib.POP3_SSL(TEST_DOMAIN, 995)
@@ -141,7 +141,7 @@ def test_smtp_headers():
     s.sendmail(TEST_SENDER, [TEST_ADDRESS], msg)
     s.quit()
 
-    sleep(3)
+    sleep(10)
 
     # Get the message
     m = imaplib.IMAP4_SSL(TEST_DOMAIN, 993)
