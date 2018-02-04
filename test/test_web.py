@@ -57,4 +57,4 @@ def test_owncloud_http():
 
     # 200 - We should be at the login page
     assert r.status_code == 200
-    assert 'ownCloud' in r.content
+    assert 'Nextcloud' in r.content
