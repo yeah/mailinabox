@@ -18,10 +18,10 @@ def test_backup_mail():
 
     # trigger a backup
     sleep(2)
-    cmd_ssh = "sshpass -p vagrant ssh vagrant@{} -p {} ".format(TEST_SERVER, TEST_PORT)
-    cmd_count = cmd_ssh + "ls -l /home/user-data/backup/encrypted | wc -l"
+    cmd_ssh = "vagrant ssh -c "
+    cmd_count = cmd_ssh + "\"ls -l /home/user-data/backup/encrypted | wc -l\""
     num_backup_files = int(check_output(cmd_count, shell=True))
-    cmd = cmd_ssh + "sudo /vagrant/management/backup.py"
+    cmd = cmd_ssh + "\"sudo /vagrant/management/backup.py\""
     check_call(cmd, shell=True)
     num_backup_files_new = int(check_output(cmd_count, shell=True))
     assert num_backup_files_new > num_backup_files
