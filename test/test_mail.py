@@ -2,6 +2,7 @@ from time import sleep
 import requests
 import os
 import pytest
+import re
 import imaplib
 import poplib
 import smtplib
@@ -150,7 +151,8 @@ def test_smtp_headers():
     _, res = m.search(None, '(SUBJECT \"{}\")'.format(subject))
     _, data = m.fetch(res[0], '(RFC822)')
 
-    assert 'ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits)' in data[0][1]
+    regex = re.compile("Received: from .*\n\s+\(using TLS.*with cipher.*bits\)\)")
+    assert regex.search(data[0][1]), data[0][1]
 
     # Clean up
     m.store(res[0].strip(), '+FLAGS', '\\Deleted')
