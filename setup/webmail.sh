@@ -23,7 +23,8 @@ echo "Installing Roundcube (webmail)..."
 apt_install \
 	dbconfig-common \
 	php7.0-cli php7.0-sqlite php7.0-mcrypt php7.0-intl php7.0-json php7.0-common \
-	php7.0-gd php7.0-pspell tinymce libjs-jquery libjs-jquery-mousewheel libmagic1 php7.0-mbstring
+	php7.0-gd php7.0-pspell tinymce libjs-jquery libjs-jquery-mousewheel libmagic1 \
+	php7.0-mbstring php7.0-curl
 
 apt_get_quiet remove php-mail-mimedecode # no longer needed since Roundcube 1.1.3
 
@@ -39,8 +40,9 @@ VERSION=1.3.3
 HASH=903a4eb1bfc25e9a08d782a7f98502cddfa579de
 PERSISTENT_LOGIN_VERSION=dc5ca3d3f4415cc41edb2fde533c8a8628a94c76
 HTML5_NOTIFIER_VERSION=4b370e3cd60dabd2f428a26f45b677ad1b7118d5
-CARDDAV_VERSION=2.0.4
-CARDDAV_HASH=d93f3cfb3038a519e71c7c3212c1d16f5da609a4
+CARDDAV_VERSION=9e6c3c9c911e9feb0830da72a5744a04f759a3bc
+COMPOSER_VERSION=1.6.3
+COMPOSER_HASH=640d934f603ce0767ceb424b023f1cd4a5ee2fb3
 
 UPDATE_KEY=$VERSION:$PERSISTENT_LOGIN_VERSION:$HTML5_NOTIFIER_VERSION:$CARDDAV_VERSION
 
@@ -74,15 +76,12 @@ if [ $needs_update == 1 ]; then
 	# install roundcube html5_notifier plugin
 	git_clone https://github.com/kitist/html5_notifier.git $HTML5_NOTIFIER_VERSION '' ${RCM_PLUGIN_DIR}/html5_notifier
 
-	# download and verify the full release of the carddav plugin
-	wget_verify \
-		https://github.com/blind-coder/rcmcarddav/releases/download/v${CARDDAV_VERSION}/carddav-${CARDDAV_VERSION}.zip \
-		$CARDDAV_HASH \
-		/tmp/carddav.zip
+	# install roundcube carddav plugin
+	git_clone https://github.com/blind-coder/rcmcarddav.git $CARDDAV_VERSION '' ${RCM_PLUGIN_DIR}/carddav
 
-	# unzip and cleanup
-	unzip -q /tmp/carddav.zip -d ${RCM_PLUGIN_DIR}
-	rm -f /tmp/carddav.zip
+	# install dependencies for carddav plugin using composer
+	wget_verify https://getcomposer.org/download/$COMPOSER_VERSION/composer.phar $COMPOSER_HASH ${RCM_PLUGIN_DIR}/carddav/composer.phar
+	php ${RCM_PLUGIN_DIR}/carddav/composer.phar install -d "${RCM_PLUGIN_DIR}/carddav" --no-plugins --no-scripts
 
 	# record the version we've installed
 	echo $UPDATE_KEY > ${RCM_DIR}/version
