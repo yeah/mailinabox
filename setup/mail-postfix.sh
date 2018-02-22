@@ -232,7 +232,7 @@ tools/editconf.py /etc/postfix/main.cf \
 
 # If incoming email was forwarded to a local address, add Envelope-to header with recipient address
 cat > /etc/postfix/append_header << EOF;
-/(.+)/ PREPEND Envelope-to: $1
+/(.+)/ PREPEND Envelope-to: \$1
 EOF
 /usr/sbin/postmap /etc/postfix/append_header
 
