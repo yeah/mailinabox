@@ -226,6 +226,10 @@ tools/editconf.py /etc/postfix/main.cf \
 	smtpd_sender_restrictions="reject_non_fqdn_sender,reject_unknown_sender_domain,reject_authenticated_sender_login_mismatch,reject_rhsbl_sender dbl.spamhaus.org" \
 	smtpd_recipient_restrictions=permit_sasl_authenticated,permit_mynetworks,"reject_rbl_client zen.spamhaus.org",reject_unlisted_recipient,"check_policy_service inet:127.0.0.1:10023","check_recipient_access pcre:/etc/postfix/append_header"
 
+# Disable IPv6 (for now)
+tools/editconf.py /etc/postfix/main.cf \
+	inet_protocols=ipv4
+
 # If incoming email was forwarded to a local address, add Envelope-to header with recipient address
 cat > /etc/postfix/append_header << EOF;
 /(.+)/ PREPEND Envelope-to: $1
