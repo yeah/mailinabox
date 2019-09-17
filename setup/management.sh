@@ -58,6 +58,7 @@ hide_output $venv/bin/pip install --upgrade \
 
 # Create a backup directory and a random key for encrypting backups.
 mkdir -p $STORAGE_ROOT/backup
+mkdir -p $STORAGE_ROOT/backup/tmp
 if [ ! -f $STORAGE_ROOT/backup/secret_key.txt ]; then
 	$(umask 077; openssl rand -base64 2048 > $STORAGE_ROOT/backup/secret_key.txt)
 fi

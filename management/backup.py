@@ -27,6 +27,7 @@ def backup_status(env):
 	now = datetime.datetime.now(dateutil.tz.tzlocal())
 	backup_root = os.path.join(env["STORAGE_ROOT"], 'backup')
 	backup_cache_dir = os.path.join(backup_root, 'cache')
+	backup_tmp_dir = os.path.join(backup_root, 'tmp')
 
 	def reldate(date, ref, clip):
 		if ref < date: return clip
@@ -57,6 +58,7 @@ def backup_status(env):
 		"/usr/bin/duplicity",
 		"collection-status",
 		"--archive-dir", backup_cache_dir,
+		"--tempdir", backup_tmp_dir,
 		"--gpg-options", "--cipher-algo=AES256",
 		"--log-fd", "1",
 		get_duplicity_target_url(config),
@@ -256,6 +258,7 @@ def perform_backup(full_backup):
 	config = get_backup_config(env)
 	backup_root = os.path.join(env["STORAGE_ROOT"], 'backup')
 	backup_cache_dir = os.path.join(backup_root, 'cache')
+	backup_tmp_dir = os.path.join(backup_root, 'tmp')
 	backup_dir = os.path.join(backup_root, 'encrypted')
 
 	# Are backups disabled?
@@ -305,6 +308,7 @@ def perform_backup(full_backup):
 			"full" if full_backup else "incr",
 			"--verbosity", "warning", "--no-print-statistics",
 			"--archive-dir", backup_cache_dir,
+			"--tempdir", backup_tmp_dir,
 			"--exclude", os.path.join(dir, 'backup'),
 			"--volsize", "250",
 			"--gpg-options", "--cipher-algo=AES256",
@@ -447,6 +451,7 @@ def perform_backup(full_backup):
 		"%dD" % config["min_age_in_days"],
 		"--verbosity", "error",
 		"--archive-dir", backup_cache_dir,
+		"--tempdir", backup_tmp_dir,
 		"--force",
 		get_duplicity_target_url(config)
 		] + get_duplicity_additional_args(env),
@@ -462,6 +467,7 @@ def perform_backup(full_backup):
 		"cleanup",
 		"--verbosity", "error",
 		"--archive-dir", backup_cache_dir,
+		"--tempdir", backup_tmp_dir,
 		"--force",
 		get_duplicity_target_url(config)
 		] + get_duplicity_additional_args(env),
@@ -493,6 +499,7 @@ def run_duplicity_verification():
 	backup_root = os.path.join(env["STORAGE_ROOT"], 'backup')
 	config = get_backup_config(env)
 	backup_cache_dir = os.path.join(backup_root, 'cache')
+	backup_tmp_dir = os.path.join(backup_root, 'tmp')
 
 	shell('check_call', [
 		"/usr/bin/duplicity",
@@ -500,6 +507,7 @@ def run_duplicity_verification():
 		"verify",
 		"--compare-data",
 		"--archive-dir", backup_cache_dir,
+		"--tempdir", backup_tmp_dir,
 		"--exclude", backup_root,
 		get_duplicity_target_url(config),
 		env["STORAGE_ROOT"],
@@ -509,10 +517,12 @@ def run_duplicity_restore(args):
 	env = load_environment()
 	config = get_backup_config(env)
 	backup_cache_dir = os.path.join(env["STORAGE_ROOT"], 'backup', 'cache')
+	backup_tmp_dir = os.path.join(env["STORAGE_ROOT"], 'backup', 'tmp')
 	shell('check_call', [
 		"/usr/bin/duplicity",
 		"restore",
 		"--archive-dir", backup_cache_dir,
+		"--tempdir", backup_tmp_dir,
 		get_duplicity_target_url(config),
 		] + get_duplicity_additional_args(env) + args,
 	get_duplicity_env_vars(env))
