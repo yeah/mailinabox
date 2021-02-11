@@ -119,6 +119,13 @@ describe SPF_FAIL SPF check failed
 score SPF_FAIL 5.0
 EOF
 
+# Local SpamAssassin rules
+mkdir -p $STORAGE_ROOT/mail/spamassassin
+touch $STORAGE_ROOT/mail/spamassassin/miab_local.cf
+chown spampd.spampd $STORAGE_ROOT/mail/spamassassin/miab_local.cf
+chmod 666 $STORAGE_ROOT/mail/spamassassin/miab_local.cf
+ln -nfs $STORAGE_ROOT/mail/spamassassin/miab_local.cf /etc/spamassassin/miab_local.cf
+
 # Bayesean learning
 # -----------------
 #
