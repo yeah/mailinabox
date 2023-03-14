@@ -27,7 +27,7 @@ def backup_status(env):
 	now = datetime.datetime.now(dateutil.tz.tzlocal())
 	backup_root = os.path.join(env["STORAGE_ROOT"], 'backup')
 	backup_cache_dir = os.path.join(backup_root, 'cache')
-	backup_tmp_dir = os.path.join(backup_root, 'tmp')
+	backup_tmp_dir = os.path.join('/', 'tmp', 'backup')
 
 	def reldate(date, ref, clip):
 		if ref < date: return clip
@@ -258,7 +258,7 @@ def perform_backup(full_backup):
 	config = get_backup_config(env)
 	backup_root = os.path.join(env["STORAGE_ROOT"], 'backup')
 	backup_cache_dir = os.path.join(backup_root, 'cache')
-	backup_tmp_dir = os.path.join(backup_root, 'tmp')
+	backup_tmp_dir = os.path.join('/', 'tmp', 'backup')
 	backup_dir = os.path.join(backup_root, 'encrypted')
 
 	# Are backups disabled?
@@ -499,7 +499,7 @@ def run_duplicity_verification():
 	backup_root = os.path.join(env["STORAGE_ROOT"], 'backup')
 	config = get_backup_config(env)
 	backup_cache_dir = os.path.join(backup_root, 'cache')
-	backup_tmp_dir = os.path.join(backup_root, 'tmp')
+	backup_tmp_dir = os.path.join('/', 'tmp', 'backup')
 
 	shell('check_call', [
 		"/usr/bin/duplicity",
@@ -517,7 +517,7 @@ def run_duplicity_restore(args):
 	env = load_environment()
 	config = get_backup_config(env)
 	backup_cache_dir = os.path.join(env["STORAGE_ROOT"], 'backup', 'cache')
-	backup_tmp_dir = os.path.join(env["STORAGE_ROOT"], 'backup', 'tmp')
+	backup_tmp_dir = os.path.join('/', 'tmp', 'backup')
 	shell('check_call', [
 		"/usr/bin/duplicity",
 		"restore",
