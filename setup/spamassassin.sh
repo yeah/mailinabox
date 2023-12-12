@@ -47,11 +47,12 @@ echo "public.pyzor.org:24441" > /etc/spamassassin/pyzor/servers
 #   is Spamassassin (spamc)'s own default. Specified in KBytes.
 # * Disable localmode so Pyzor, DKIM and DNS checks can be used.
 # * Increase number of child processes for parallel spam processing
+spampd_children=$(echo "$(nproc) * 2" | bc)
 tools/editconf.py /etc/default/spampd \
 	DESTPORT=10026 \
 	ADDOPTS="\"--maxsize=2000\"" \
 	LOCALONLY=0 \
-	CHILDREN=10
+	CHILDREN=$((spampd_children>10 ? spampd_children : 10))
 
 # Spamassassin normally wraps spam as an attachment inside a fresh
 # email with a report about the message. This also protects the user
@@ -203,4 +204,3 @@ chmod 770 $STORAGE_ROOT/mail/spamassassin
 # Kick services.
 restart_service spampd
 restart_service dovecot
-
