@@ -238,7 +238,9 @@ tools/editconf.py /etc/postfix/main.cf  -e lmtp_destination_recipient_limit=
 # "450 4.7.1 Client host rejected: Service unavailable". This is a retry code, so the mail doesn't properly bounce. #NODOC
 mkdir -p $STORAGE_ROOT/mail/postfix
 touch $STORAGE_ROOT/mail/postfix/rbl_sender_override
+/usr/sbin/postmap $STORAGE_ROOT/mail/postfix/rbl_sender_override
 ln -nfs $STORAGE_ROOT/mail/postfix/rbl_sender_override /etc/postfix/rbl_sender_override
+ln -nfs $STORAGE_ROOT/mail/postfix/rbl_sender_override.db /etc/postfix/rbl_sender_override.db
 tools/editconf.py /etc/postfix/main.cf \
 	smtpd_sender_restrictions="reject_non_fqdn_sender,reject_unknown_sender_domain,reject_authenticated_sender_login_mismatch,check_sender_access hash:/etc/postfix/rbl_sender_override,reject_rhsbl_sender dbl.spamhaus.org=127.0.1.[2..99]" \
 	smtpd_recipient_restrictions="permit_sasl_authenticated,permit_mynetworks,reject_rbl_client zen.spamhaus.org=127.0.0.[2..11],reject_unlisted_recipient,check_policy_service inet:127.0.0.1:10023","check_recipient_access pcre:/etc/postfix/append_header"
