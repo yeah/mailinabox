@@ -252,21 +252,15 @@ def check_smart_status(env, output):
 	for device in devices.splitlines():
 		device = device.split()[0]
 		info = shell('check_output', ['smartctl', '-i', device])
-		if 'SMART support is: Available' in info:
-			if 'SMART support is: Enabled' in info:
-				code, health = shell('check_output', ['smartctl', '-H', device, '--quietmode=errorsonly'], trap=True)
-				if code == 0:
-					output.print_ok('Disk %s passed all S.M.A.R.T. checks and seems healthy.' % device)
-				else:
-					output.print_error('Disk %s failed the S.M.A.R.T health check. Consider replacing the hard drive. Detailed information:' % device)
-					output.print_line("")
-					for line in health.split('=== START OF READ SMART DATA SECTION ===')[1].splitlines():
-						output.print_line(line)
-			else:
-				output.print_warning('Disk %s supports S.M.A.R.T, but it is disabled. You should activate it using \'sudo smartctl -s on %s\'.' % (device, device))
-
+		code, health = shell('check_output', ['smartctl', '-H', device, '--quietmode=errorsonly'], trap=True)
+		if code == 0:
+			output.print_ok('Disk %s passed all S.M.A.R.T. checks and seems healthy.' % device)
 		else:
-			output.print_ok('Disk %s does not support S.M.A.R.T. Health checks are skipped.' % device)
+			output.print_error('Disk %s failed the S.M.A.R.T health check. Consider replacing the hard drive. Detailed information:' % device)
+			output.print_line("")
+			for line in health.split('=== START OF READ SMART DATA SECTION ===')[1].splitlines():
+				output.print_line(line)
+
 
 def check_raid_status(env, output):
 	try:
