@@ -241,9 +241,44 @@ touch $STORAGE_ROOT/mail/postfix/rbl_sender_override
 /usr/sbin/postmap $STORAGE_ROOT/mail/postfix/rbl_sender_override
 ln -nfs $STORAGE_ROOT/mail/postfix/rbl_sender_override /etc/postfix/rbl_sender_override
 ln -nfs $STORAGE_ROOT/mail/postfix/rbl_sender_override.db /etc/postfix/rbl_sender_override.db
+
+# Use a Spamhaus DQS key (if defined) to task to Spamhaus.
+# You can define a key by setting SPAMHAUS_DQS_KEY in /etc/mailinabox.conf.
+# If no key is defined there, we use the public spamhaus servers.
+# You can request a key by registering an account at
+# https://www.spamhaus.com/data-access/free-data-query-service/
+if [ -n "$SPAMHAUS_DQS_KEY" ]; then
+	spamhaus_dbl="$SPAMHAUS_DQS_KEY.dbl.dq.spamhaus.net"
+	spamhaus_pbl="$SPAMHAUS_DQS_KEY.pbl.dq.spamhaus.net"
+	spamhaus_sbl="$SPAMHAUS_DQS_KEY.sbl.dq.spamhaus.net"
+	spamhaus_sbl_xbl="$SPAMHAUS_DQS_KEY.sbl-xbl.dq.spamhaus.net"
+	spamhaus_xbl="$SPAMHAUS_DQS_KEY.xbl.dq.spamhaus.net"
+	spamhaus_zen="$SPAMHAUS_DQS_KEY.zen.dq.spamhaus.net"
+	spamhaus_zrd="$SPAMHAUS_DQS_KEY.zrd.dq.spamhaus.net"
+else
+	spamhaus_dbl="dbl.spamhaus.org"
+	spamhaus_pbl="pbl.spamhaus.org"
+	spamhaus_sbl="sbl.spamhaus.org"
+	spamhaus_sbl_xbl="sbl-xbl.spamhaus.org"
+	spamhaus_xbl="xbl.spamhaus.org"
+	spamhaus_zen="zen.spamhaus.org"
+	spamhaus_zrd="zrd.spamhaus.org"
+fi
 tools/editconf.py /etc/postfix/main.cf \
-	smtpd_sender_restrictions="reject_non_fqdn_sender,reject_unknown_sender_domain,reject_authenticated_sender_login_mismatch,check_sender_access hash:/etc/postfix/rbl_sender_override,reject_rhsbl_sender dbl.spamhaus.org=127.0.1.[2..99]" \
-	smtpd_recipient_restrictions="permit_sasl_authenticated,permit_mynetworks,reject_rbl_client zen.spamhaus.org=127.0.0.[2..11],reject_unlisted_recipient,check_policy_service inet:127.0.0.1:10023,check_policy_service inet:127.0.0.1:12340","check_recipient_access pcre:/etc/postfix/append_header"
+	smtpd_sender_restrictions="reject_non_fqdn_sender,reject_unknown_sender_domain,reject_authenticated_sender_login_mismatch,check_sender_access hash:/etc/postfix/rbl_sender_override,reject_rhsbl_sender $spamhaus_dbl=127.0.1.[2..99]" \
+	smtpd_recipient_restrictions="permit_sasl_authenticated,permit_mynetworks,reject_rbl_client $spamhaus_zen=127.0.0.[2..11],reject_unlisted_recipient,check_policy_service inet:127.0.0.1:10023,check_policy_service inet:127.0.0.1:12340","check_recipient_access pcre:/etc/postfix/append_header" \
+	rbl_reply_maps=hash:/etc/postfix/dnsbl-reply-map
+
+cat > /etc/postfix/dnsbl-reply-map << EOF;
+$spamhaus_dbl=127.0.1.[2..99]       \$rbl_code Service unavailable; \$rbl_class [\$rbl_what] blocked using dbl.spamhaus.org\${rbl_reason?; \$rbl_reason}
+$spamhaus_pbl=127.0.0.[2..255]      \$rbl_code Service unavailable; \$rbl_class [\$rbl_what] blocked using pbl.spamhaus.org\${rbl_reason?; \$rbl_reason}
+$spamhaus_sbl=127.0.0.[2..255]      \$rbl_code Service unavailable; \$rbl_class [\$rbl_what] blocked using sbl.spamhaus.org\${rbl_reason?; \$rbl_reason}
+$spamhaus_sbl_xbl=127.0.0.[2..255]  \$rbl_code Service unavailable; \$rbl_class [\$rbl_what] blocked using sbl-xbl.spamhaus.org\${rbl_reason?; \$rbl_reason}
+$spamhaus_xbl=127.0.0.[2..255]      \$rbl_code Service unavailable; \$rbl_class [\$rbl_what] blocked using xbl.spamhaus.org\${rbl_reason?; \$rbl_reason}
+$spamhaus_zen=127.0.0.[2..255]      \$rbl_code Service unavailable; \$rbl_class [\$rbl_what] blocked using zen.spamhaus.org\${rbl_reason?; \$rbl_reason}
+$spamhaus_zrd=127.0.2.[2..24]       \$rbl_code Service unavailable; \$rbl_class [\$rbl_what] blocked using zrd.spamhaus.org\${rbl_reason?; \$rbl_reason}
+EOF
+/usr/sbin/postmap hash:/etc/postfix/dnsbl-reply-map
 
 # Disable IPv6 (for now)
 tools/editconf.py /etc/postfix/main.cf \
