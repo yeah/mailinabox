@@ -275,7 +275,7 @@ $spamhaus_pbl=127.0.0.[2..255]      \$rbl_code Service unavailable; \$rbl_class 
 $spamhaus_sbl=127.0.0.[2..255]      \$rbl_code Service unavailable; \$rbl_class [\$rbl_what] blocked using sbl.spamhaus.org\${rbl_reason?; \$rbl_reason}
 $spamhaus_sbl_xbl=127.0.0.[2..255]  \$rbl_code Service unavailable; \$rbl_class [\$rbl_what] blocked using sbl-xbl.spamhaus.org\${rbl_reason?; \$rbl_reason}
 $spamhaus_xbl=127.0.0.[2..255]      \$rbl_code Service unavailable; \$rbl_class [\$rbl_what] blocked using xbl.spamhaus.org\${rbl_reason?; \$rbl_reason}
-$spamhaus_zen=127.0.0.[2..255]      \$rbl_code Service unavailable; \$rbl_class [\$rbl_what] blocked using zen.spamhaus.org\${rbl_reason?; \$rbl_reason}
+$spamhaus_zen=127.0.0.[2..11]       \$rbl_code Service unavailable; \$rbl_class [\$rbl_what] blocked using zen.spamhaus.org\${rbl_reason?; \$rbl_reason}
 $spamhaus_zrd=127.0.2.[2..24]       \$rbl_code Service unavailable; \$rbl_class [\$rbl_what] blocked using zrd.spamhaus.org\${rbl_reason?; \$rbl_reason}
 EOF
 /usr/sbin/postmap hash:/etc/postfix/dnsbl-reply-map
